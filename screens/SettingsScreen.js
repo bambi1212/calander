@@ -54,8 +54,8 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleReport = () => {
-    Linking.openURL("mailto:support@example.com?subject=Bug%20Report").catch(() => {});
+  const handleReview = () => {
+    Linking.openURL("mailto:reznik.associates@gmail.com?subject=App%20Review").catch(() => {});
   };
 
   const handleLogout = () => {
@@ -113,9 +113,9 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity style={styles.row} onPress={handleReport}>
-          <Text style={styles.rowText}>Report a Bug</Text>
-          <Text style={styles.rowHint}>Tell us what went wrong</Text>
+        <TouchableOpacity style={styles.row} onPress={handleReview}>
+          <Text style={styles.rowText}>Review Us</Text>
+          <Text style={styles.rowHint}>Send feedback to our team</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.row, styles.logoutRow]} onPress={handleLogout}>

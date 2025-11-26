@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
-
-const PRIMARY = "#3478F6";
+import { useAppTheme } from "../context/AppThemeContext";
 
 const formatEventTime = (event) => {
   const pad = (value) => String(value).padStart(2, "0");
@@ -27,6 +26,8 @@ const formatEventTime = (event) => {
 };
 
 export default function ViewEventsScreen({ route, navigation, user }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const routeDate = route?.params?.date;
   const selectedDate = routeDate || new Date().toISOString().split("T")[0];
   const [events, setEvents] = useState([]);
@@ -115,7 +116,7 @@ export default function ViewEventsScreen({ route, navigation, user }) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {loading ? (
-        <ActivityIndicator color={PRIMARY} />
+        <ActivityIndicator color={colors.primary} />
       ) : (
         <FlatList
           data={events}
@@ -133,65 +134,66 @@ export default function ViewEventsScreen({ route, navigation, user }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-  },
-  heading: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 12,
-  },
-  error: {
-    color: "#DC2626",
-    marginBottom: 8,
-  },
-  card: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  cardTime: {
-    fontSize: 13,
-    color: "#4B5563",
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: "#4B5563",
-  },
-  cardActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 10,
-    gap: 16,
-  },
-  actionEdit: {
-    color: PRIMARY,
-    fontWeight: "700",
-  },
-  actionDelete: {
-    color: "#DC2626",
-    fontWeight: "700",
-  },
-  emptyText: {
-    textAlign: "center",
-    color: "#6B7280",
-  },
-});
+const getStyles = (colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 16,
+    },
+    heading: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: 12,
+    },
+    error: {
+      color: "#DC2626",
+      marginBottom: 8,
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    cardTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    cardTime: {
+      fontSize: 13,
+      color: colors.muted,
+    },
+    cardDescription: {
+      fontSize: 14,
+      color: colors.muted,
+    },
+    cardActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      marginTop: 10,
+      gap: 16,
+    },
+    actionEdit: {
+      color: colors.primary,
+      fontWeight: "700",
+    },
+    actionDelete: {
+      color: "#DC2626",
+      fontWeight: "700",
+    },
+    emptyText: {
+      textAlign: "center",
+      color: colors.muted,
+    },
+  });

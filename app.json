@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.reznikassociates.calander",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,6 +44,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1cd37e55-0e13-4ebe-96e8-c714c4d24af9"
+      },
+      "googleAndroidClientId": "24964409274-2b4u4e2n46p8dvujjb08e3h2qe6g92p0.apps.googleusercontent.com"
     }
   }
 }

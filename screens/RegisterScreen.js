@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -11,9 +11,13 @@ import {
   Platform,
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
+import { useAppTheme } from "../context/AppThemeContext";
 
 export default function RegisterScreen({ navigation }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -36,7 +40,10 @@ export default function RegisterScreen({ navigation }) {
     }
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      if (cred?.user?.uid) {
+        await setDoc(doc(db, "events", cred.user.uid), { events: [] }, { merge: true });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -62,7 +69,7 @@ export default function RegisterScreen({ navigation }) {
             value={email}
             onChangeText={setEmail}
             placeholder="Email"
-            placeholderTextColor="#9AA3AF"
+            placeholderTextColor={colors.muted}
             keyboardType="email-address"
             autoCapitalize="none"
             style={styles.input}
@@ -71,7 +78,7 @@ export default function RegisterScreen({ navigation }) {
             value={password}
             onChangeText={setPassword}
             placeholder="Password"
-            placeholderTextColor="#9AA3AF"
+            placeholderTextColor={colors.muted}
             secureTextEntry
             style={styles.input}
           />
@@ -79,7 +86,7 @@ export default function RegisterScreen({ navigation }) {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Confirm Password"
-            placeholderTextColor="#9AA3AF"
+            placeholderTextColor={colors.muted}
             secureTextEntry
             style={styles.input}
           />
@@ -112,77 +119,79 @@ export default function RegisterScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  container: {
-    flex: 1,
-    padding: 24,
-  },
-  header: {
-    marginTop: 32,
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: "#3478F6",
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 16,
-    color: "#4B5563",
-  },
-  form: {
-    gap: 16,
-  },
-  input: {
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 16,
-    backgroundColor: "#F8FAFC",
-    color: "#111827",
-  },
-  error: {
-    color: "#DC2626",
-    fontSize: 14,
-    marginTop: -8,
-  },
-  button: {
-    backgroundColor: "#3478F6",
-    height: 52,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    shadowColor: "#3478F6",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  buttonDisabled: {
-    opacity: 0.8,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  linkButton: {
-    marginTop: 12,
-    alignItems: "center",
-  },
-  linkText: {
-    color: "#4B5563",
-    fontSize: 14,
-  },
-  linkBold: {
-    color: "#3478F6",
-    fontWeight: "600",
-  },
-});
+const getStyles = (colors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+      padding: 24,
+      backgroundColor: colors.background,
+    },
+    header: {
+      marginTop: 32,
+      marginBottom: 32,
+    },
+    title: {
+      fontSize: 30,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    subtitle: {
+      marginTop: 8,
+      fontSize: 16,
+      color: colors.muted,
+    },
+    form: {
+      gap: 16,
+    },
+    input: {
+      height: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      backgroundColor: colors.card,
+      color: colors.text,
+    },
+    error: {
+      color: "#DC2626",
+      fontSize: 14,
+      marginTop: -8,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      height: 52,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+      shadowColor: colors.primary,
+      shadowOpacity: 0.2,
+      shadowOffset: { width: 0, height: 4 },
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    buttonDisabled: {
+      opacity: 0.8,
+    },
+    buttonText: {
+      color: "#FFFFFF",
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    linkButton: {
+      marginTop: 12,
+      alignItems: "center",
+    },
+    linkText: {
+      color: colors.muted,
+      fontSize: 14,
+    },
+    linkBold: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+  });

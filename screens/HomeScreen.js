@@ -13,8 +13,7 @@ import { Calendar } from "react-native-calendars";
 import { doc, getDoc } from "firebase/firestore";
 
 import { db } from "../firebase";
-
-const PRIMARY = "#3478F6";
+import { useAppTheme } from "../context/AppThemeContext";
 
 const formatEventTime = (event) => {
   const pad = (value) => String(value).padStart(2, "0");
@@ -29,6 +28,8 @@ const formatEventTime = (event) => {
 };
 
 export default function HomeScreen({ navigation, user }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const [events, setEvents] = useState([]);
@@ -59,16 +60,16 @@ export default function HomeScreen({ navigation, user }) {
       headerRight: () => (
         <TouchableOpacity
           style={styles.menuButton}
-          onPress={() => navigation.navigate("Settings")}
-          accessibilityLabel="Open settings"
+          onPress={() => navigation.navigate("Menu")}
+          accessibilityLabel="Open menu"
         >
           <View style={styles.menuLine} />
-          <View style={[styles.menuLine, { width: 18 }]} />
-          <View style={[styles.menuLine, { width: 20 }]} />
+          <View style={styles.menuLine} />
+          <View style={styles.menuLine} />
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, styles.menuButton, styles.menuLine]);
 
   const handleDayPress = (day) => {
     const dateString = day.dateString;
@@ -85,7 +86,7 @@ export default function HomeScreen({ navigation, user }) {
         acc[event.date] = {
           ...(acc[event.date] || {}),
           marked: true,
-          dotColor: PRIMARY,
+          dotColor: colors.primary,
         };
       }
       return acc;
@@ -95,7 +96,7 @@ export default function HomeScreen({ navigation, user }) {
       marks[selectedDate] = {
         ...(marks[selectedDate] || {}),
         selected: true,
-        selectedColor: PRIMARY,
+        selectedColor: colors.primary,
         selectedTextColor: "#FFFFFF",
       };
     }
@@ -115,8 +116,12 @@ export default function HomeScreen({ navigation, user }) {
         onDayPress={handleDayPress}
         markedDates={markedDates}
         theme={{
-          todayTextColor: PRIMARY,
-          arrowColor: PRIMARY,
+          todayTextColor: colors.primary,
+          arrowColor: colors.primary,
+          calendarBackground: colors.card,
+          dayTextColor: colors.text,
+          textDisabledColor: colors.muted,
+          monthTextColor: colors.text,
         }}
         style={styles.calendar}
       />
@@ -132,8 +137,8 @@ export default function HomeScreen({ navigation, user }) {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <ActivityIndicator color={PRIMARY} />
+          {loading ? (
+        <ActivityIndicator color={colors.primary} />
       ) : (
         <FlatList
           data={eventsForSelectedDate}
@@ -169,96 +174,97 @@ export default function HomeScreen({ navigation, user }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-  },
-  calendar: {
-    borderRadius: 12,
-    elevation: 1,
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  link: {
-    color: PRIMARY,
-    fontWeight: "600",
-  },
-  eventCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  eventMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  eventTime: {
-    fontSize: 14,
-    color: "#4B5563",
-  },
-  eventDescription: {
-    fontSize: 14,
-    color: "#4B5563",
-  },
-  emptyText: {
-    color: "#6B7280",
-    textAlign: "center",
-    marginTop: 20,
-  },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 30,
-    backgroundColor: PRIMARY,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: PRIMARY,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  fabText: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  menuButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  menuLine: {
-    height: 3,
-    width: 22,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 2,
-    marginVertical: 2,
-  },
-});
+const getStyles = (colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 16,
+    },
+    calendar: {
+      borderRadius: 12,
+      elevation: 1,
+      marginBottom: 12,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    link: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    eventCard: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    eventMeta: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    eventTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    eventTime: {
+      fontSize: 14,
+      color: colors.muted,
+    },
+    eventDescription: {
+      fontSize: 14,
+      color: colors.muted,
+    },
+    emptyText: {
+      color: colors.muted,
+      textAlign: "center",
+      marginTop: 20,
+    },
+    fab: {
+      position: "absolute",
+      right: 20,
+      bottom: 30,
+      backgroundColor: colors.primary,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: colors.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
+    },
+    fabText: {
+      color: "#FFFFFF",
+      fontSize: 28,
+      fontWeight: "700",
+    },
+    menuButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    menuLine: {
+      height: 3,
+      width: 22,
+      backgroundColor: colors.headerText,
+      borderRadius: 2,
+      marginVertical: 2,
+    },
+  });

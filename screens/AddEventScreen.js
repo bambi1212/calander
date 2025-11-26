@@ -15,10 +15,11 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import TimePicker from "../components/TimePicker";
-
-const PRIMARY = "#3478F6";
+import { useAppTheme } from "../context/AppThemeContext";
 
 export default function AddEventScreen({ navigation, route, user }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const { date: initialDate, event } = route.params || {};
   const today = new Date().toISOString().split("T")[0];
 
@@ -164,7 +165,7 @@ export default function AddEventScreen({ navigation, route, user }) {
               value={title}
               onChangeText={setTitle}
               placeholder="Event title"
-              placeholderTextColor="#9AA3AF"
+              placeholderTextColor={colors.muted}
               style={styles.input}
             />
 
@@ -173,7 +174,7 @@ export default function AddEventScreen({ navigation, route, user }) {
               value={description}
               onChangeText={setDescription}
               placeholder="Optional notes"
-              placeholderTextColor="#9AA3AF"
+              placeholderTextColor={colors.muted}
               style={[styles.input, styles.multiline]}
               multiline
               numberOfLines={3}
@@ -195,8 +196,8 @@ export default function AddEventScreen({ navigation, route, user }) {
               <Switch
                 value={hasEndTime}
                 onValueChange={setHasEndTime}
-                trackColor={{ true: "#5E9CFF", false: "#CBD5E1" }}
-                thumbColor={hasEndTime ? "#3478F6" : "#FFFFFF"}
+                trackColor={{ true: colors.primary, false: "#CBD5E1" }}
+                thumbColor={hasEndTime ? "#FFFFFF" : "#FFFFFF"}
               />
             </View>
             {hasEndTime && (
@@ -267,86 +268,87 @@ export default function AddEventScreen({ navigation, route, user }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  container: {
-    flex: 1,
-  },
-  form: {
-    gap: 14,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  label: {
-    fontWeight: "600",
-    color: "#111827",
-  },
-  input: {
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 14,
-    backgroundColor: "#F8FAFC",
-    color: "#111827",
-  },
-  multiline: {
-    height: 90,
-    paddingTop: 12,
-  },
-  timeButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 14,
-    backgroundColor: "#F8FAFC",
-  },
-  timeButtonText: {
-    fontWeight: "700",
-    color: "#111827",
-    fontSize: 16,
-  },
-  timeButtonHint: {
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  switchRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  timeHint: {
-    color: "#6B7280",
-    marginTop: 6,
-  },
-  error: {
-    color: "#DC2626",
-    fontSize: 14,
-  },
-  button: {
-    backgroundColor: PRIMARY,
-    height: 52,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 6,
-    shadowColor: PRIMARY,
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  buttonDisabled: {
-    opacity: 0.85,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-});
+const getStyles = (colors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+    },
+    form: {
+      gap: 14,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    label: {
+      fontWeight: "600",
+      color: colors.text,
+    },
+    input: {
+      height: 50,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      backgroundColor: colors.card,
+      color: colors.text,
+    },
+    multiline: {
+      height: 90,
+      paddingTop: 12,
+    },
+    timeButton: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      backgroundColor: colors.card,
+    },
+    timeButtonText: {
+      fontWeight: "700",
+      color: colors.text,
+      fontSize: 16,
+    },
+    timeButtonHint: {
+      color: colors.muted,
+      marginTop: 4,
+    },
+    switchRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    timeHint: {
+      color: colors.muted,
+      marginTop: 6,
+    },
+    error: {
+      color: "#DC2626",
+      fontSize: 14,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      height: 52,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 6,
+      shadowColor: colors.primary,
+      shadowOpacity: 0.2,
+      shadowOffset: { width: 0, height: 4 },
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    buttonDisabled: {
+      opacity: 0.85,
+    },
+    buttonText: {
+      color: "#FFFFFF",
+      fontWeight: "700",
+      fontSize: 16,
+    },
+  });
