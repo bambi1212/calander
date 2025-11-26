@@ -10,33 +10,45 @@ import {
 
 const PRIMARY = "#3478F6";
 const ITEM_HEIGHT = 44;
-const VISIBLE_ITEMS = 5;
-const CENTER_INDEX = Math.floor(VISIBLE_ITEMS / 2);
+const VISIBLE_ROWS = 5;
+const WHEEL_HEIGHT = ITEM_HEIGHT * VISIBLE_ROWS;
+const SELECTION_TOP = ITEM_HEIGHT * Math.floor(VISIBLE_ROWS / 2);
+const LOOP_MULTIPLIER = 80;
 
-const createLoopedData = (values, loopCount = 50) => {
+const pad = (value) => String(value).padStart(2, "0");
+
+const buildLoopedData = (values) => {
   const looped = [];
-  for (let i = 0; i < loopCount; i += 1) {
+  for (let i = 0; i < LOOP_MULTIPLIER; i += 1) {
     looped.push(...values);
   }
   return looped;
 };
 
-const pad = (value) => String(value).padStart(2, "0");
+const normalizeIndex = (index, length) => {
+  const mod = index % length;
+  return mod < 0 ? mod + length : mod;
+};
 
-const LoopWheel = ({ data, value, onChange, labelFormatter }) => {
+const InfiniteWheel = ({ data, value, onChange, formatter }) => {
   const listRef = useRef(null);
   const baseLength = data.length;
-  const looped = useMemo(() => createLoopedData(data), [data]);
-  const middleIndex = Math.floor(looped.length / 2);
+  const loopedData = useMemo(() => buildLoopedData(data), [data]);
+  const middleAnchor =
+    Math.floor(loopedData.length / 2) -
+    (Math.floor(loopedData.length / 2) % baseLength);
 
   const initialIndex = useMemo(() => {
-    const idx = looped.findIndex((item, i) => {
-      return item === value && i >= middleIndex - baseLength && i <= middleIndex + baseLength;
-    });
-    return idx >= 0 ? idx : middleIndex;
-  }, [looped, value, middleIndex, baseLength]);
+    const valueIndex = Math.max(0, data.findIndex((item) => item === value));
+    return middleAnchor + valueIndex;
+  }, [data, value, middleAnchor]);
+
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+  const activeRef = useRef(initialIndex);
 
   useEffect(() => {
+    activeRef.current = initialIndex;
+    setActiveIndex(initialIndex);
     if (listRef.current) {
       listRef.current.scrollToOffset({
         offset: initialIndex * ITEM_HEIGHT,
@@ -45,56 +57,73 @@ const LoopWheel = ({ data, value, onChange, labelFormatter }) => {
     }
   }, [initialIndex]);
 
-  const handleScrollEnd = (e) => {
-    const offset = e.nativeEvent.contentOffset.y;
-    const index = Math.round(offset / ITEM_HEIGHT);
-    const wrappedIndex = ((index % looped.length) + looped.length) % looped.length;
-    const picked = looped[wrappedIndex];
-    if (picked !== undefined && listRef.current) {
-      const targetOffset = index * ITEM_HEIGHT;
-      listRef.current.scrollToOffset({ offset: targetOffset, animated: true });
-      onChange(picked);
+  const updateValueFromIndex = (index) => {
+    const normalized = normalizeIndex(index, baseLength);
+    const nextValue = data[normalized];
+    if (nextValue !== undefined) {
+      onChange?.(nextValue);
     }
+  };
+
+  const handleScroll = (e) => {
+    const offsetY = e.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    if (index !== activeRef.current) {
+      activeRef.current = index;
+      setActiveIndex(index);
+      updateValueFromIndex(index);
+    }
+  };
+
+  const handleMomentumScrollEnd = (e) => {
+    const offsetY = e.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const normalized = normalizeIndex(index, baseLength);
+    const anchoredIndex = middleAnchor + normalized;
+
+    // Re-center the wheel when the user nears the edges so the loop feels endless.
+    if (Math.abs(anchoredIndex - index) > baseLength && listRef.current) {
+      listRef.current.scrollToOffset({
+        offset: anchoredIndex * ITEM_HEIGHT,
+        animated: false,
+      });
+      activeRef.current = anchoredIndex;
+      setActiveIndex(anchoredIndex);
+    }
+
+    updateValueFromIndex(index);
   };
 
   return (
     <View style={styles.wheel}>
-      <View style={styles.wheelHighlight} pointerEvents="none" />
+      <View style={styles.selectionBar} pointerEvents="none" />
       <FlatList
         ref={listRef}
-        data={looped}
+        data={loopedData}
         keyExtractor={(_, idx) => String(idx)}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
-        getItemLayout={(_, index) => ({
+        contentContainerStyle={{ paddingVertical: SELECTION_TOP }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        getItemLayout={(_, idx) => ({
           length: ITEM_HEIGHT,
-          offset: ITEM_HEIGHT * index,
-          index,
+          offset: ITEM_HEIGHT * idx,
+          index: idx,
         })}
-        contentContainerStyle={{
-          paddingVertical: ITEM_HEIGHT * CENTER_INDEX,
-        }}
-        onMomentumScrollEnd={handleScrollEnd}
-        renderItem={({ item }) => {
-          const isSelected = item === value;
+        renderItem={({ item, index }) => {
+          const isActive = index === activeIndex;
           return (
-            <View
-              style={[
-                styles.wheelItem,
-                { backgroundColor: isSelected ? "#E8F1FF" : "#FFFFFF" },
-              ]}
-            >
+            <View style={styles.wheelItem}>
               <Text
                 style={[
                   styles.wheelText,
-                  {
-                    color: isSelected ? "#0F172A" : "#6B7280",
-                    opacity: isSelected ? 1 : 0.6,
-                  },
+                  isActive ? styles.wheelTextActive : styles.wheelTextInactive,
                 ]}
               >
-                {labelFormatter ? labelFormatter(item) : item}
+                {formatter ? formatter(item) : item}
               </Text>
             </View>
           );
@@ -104,7 +133,7 @@ const LoopWheel = ({ data, value, onChange, labelFormatter }) => {
   );
 };
 
-export default function TimePickerPopup({
+function TimePickerModal({
   visible,
   onClose,
   initialHour = 12,
@@ -136,22 +165,27 @@ export default function TimePickerPopup({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.title}>Select Time</Text>
           <View style={styles.wheelsRow}>
-            <LoopWheel
+            <InfiniteWheel
               data={hours}
               value={hour}
               onChange={setHour}
-              labelFormatter={(v) => pad(v)}
+              formatter={(v) => pad(v)}
             />
-            <LoopWheel
+            <InfiniteWheel
               data={minutes}
               value={minute}
               onChange={setMinute}
-              labelFormatter={(v) => pad(v)}
+              formatter={(v) => pad(v)}
             />
           </View>
           <Text style={styles.preview}>{`${pad(hour)}:${pad(minute)}`}</Text>
@@ -170,6 +204,8 @@ export default function TimePickerPopup({
   );
 }
 
+export default TimePickerModal;
+
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -180,10 +216,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
-    maxWidth: 380,
+    maxWidth: 420,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     shadowColor: "#000000",
@@ -203,43 +239,49 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 4,
   },
   wheel: {
-    width: 90,
-    height: ITEM_HEIGHT * VISIBLE_ITEMS,
+    width: 96,
+    height: WHEEL_HEIGHT,
     overflow: "hidden",
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    marginHorizontal: 6,
+    marginHorizontal: 8,
     backgroundColor: "#FFFFFF",
     position: "relative",
+  },
+  selectionBar: {
+    position: "absolute",
+    left: 8,
+    right: 8,
+    top: SELECTION_TOP,
+    height: ITEM_HEIGHT,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: PRIMARY,
+    backgroundColor: "rgba(52,120,246,0.08)",
+    zIndex: 1,
   },
   wheelItem: {
     height: ITEM_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 1,
   },
   wheelText: {
     fontSize: 18,
     fontWeight: "700",
   },
-  wheelHighlight: {
-    position: "absolute",
-    top: ITEM_HEIGHT * CENTER_INDEX,
-    left: 0,
-    right: 0,
-    height: ITEM_HEIGHT,
-    backgroundColor: "#E4EDFF",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(52,120,246,0.25)",
-    zIndex: 0,
+  wheelTextActive: {
+    color: "#0F172A",
+  },
+  wheelTextInactive: {
+    color: "#6B7280",
   },
   preview: {
     textAlign: "center",
-    marginTop: 12,
+    marginTop: 14,
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
@@ -248,7 +290,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 18,
   },
   secondaryButton: {
     paddingVertical: 10,
