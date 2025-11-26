@@ -14,6 +14,18 @@ import { db } from "../firebase";
 
 const PRIMARY = "#3478F6";
 
+const formatEventTime = (event) => {
+  const pad = (value) => String(value).padStart(2, "0");
+  if (event.startHour != null && event.startMinute != null) {
+    const start = `${pad(event.startHour)}:${pad(event.startMinute)}`;
+    if (event.endHour != null && event.endMinute != null) {
+      return `${start} - ${pad(event.endHour)}:${pad(event.endMinute)}`;
+    }
+    return start;
+  }
+  return event.time || "All day";
+};
+
 export default function ViewEventsScreen({ route, navigation, user }) {
   const routeDate = route?.params?.date;
   const selectedDate = routeDate || new Date().toISOString().split("T")[0];
@@ -77,7 +89,7 @@ export default function ViewEventsScreen({ route, navigation, user }) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardTime}>{item.time || "All day"}</Text>
+        <Text style={styles.cardTime}>{formatEventTime(item)}</Text>
       </View>
       {item.description ? (
         <Text style={styles.cardDescription}>{item.description}</Text>

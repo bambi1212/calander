@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import TimePickerPopup from "../components/TimePickerPopup";
 
 const PRIMARY = "#3478F6";
 
@@ -19,18 +21,96 @@ export default function AddEventScreen({ navigation, route, user }) {
   const { date: initialDate, event } = route.params || {};
   const today = new Date().toISOString().split("T")[0];
 
+  const parseLegacyTime = (timeValue) => {
+    if (!timeValue) return {};
+    const rangeMatch = timeValue.match(
+      /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/
+    );
+    if (rangeMatch) {
+      return {
+        startHour: Number(rangeMatch[1]),
+        startMinute: Number(rangeMatch[2]),
+        endHour: Number(rangeMatch[3]),
+        endMinute: Number(rangeMatch[4]),
+      };
+    }
+
+    const singleMatch = timeValue.match(/(\d{1,2}):(\d{2})/);
+    if (singleMatch) {
+      return {
+        startHour: Number(singleMatch[1]),
+        startMinute: Number(singleMatch[2]),
+      };
+    }
+    return {};
+  };
+
+  const legacyTime = parseLegacyTime(event?.time);
+
   const [title, setTitle] = useState(event?.title || "");
   const [description, setDescription] = useState(event?.description || "");
-  const [time, setTime] = useState(event?.time || "");
   const [date, setDate] = useState(initialDate || today);
+  const [startHour, setStartHour] = useState(
+    event?.startHour ?? legacyTime.startHour ?? 12
+  );
+  const [startMinute, setStartMinute] = useState(
+    event?.startMinute ?? legacyTime.startMinute ?? 0
+  );
+  const [endHour, setEndHour] = useState(
+    event?.endHour ?? legacyTime.endHour ?? null
+  );
+  const [endMinute, setEndMinute] = useState(
+    event?.endMinute ?? legacyTime.endMinute ?? 0
+  );
+  const [hasEndTime, setHasEndTime] = useState(
+    event?.endHour != null || legacyTime.endHour != null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
+  useEffect(() => {
+    if (!hasEndTime) {
+      setEndHour(null);
+      setEndMinute(0);
+    }
+  }, [hasEndTime]);
+
+  useEffect(() => {
+    if (hasEndTime && endHour == null) {
+      setEndHour(startHour);
+      setEndMinute(startMinute);
+    }
+  }, [hasEndTime, endHour, startHour, startMinute]);
+
+  const formattedTime = useMemo(() => {
+    const pad = (value) => String(value).padStart(2, "0");
+    const start = `${pad(startHour)}:${pad(startMinute)}`;
+    if (hasEndTime && endHour != null && endMinute != null) {
+      return `${start} - ${pad(endHour)}:${pad(endMinute)}`;
+    }
+    return start;
+  }, [startHour, startMinute, hasEndTime, endHour, endMinute]);
 
   const saveEvent = async () => {
     setError("");
     if (!title || !date) {
       setError("Title and date are required.");
       return;
+    }
+    const startTotal = (startHour || 0) * 60 + (startMinute || 0);
+    let endTotal = null;
+    if (hasEndTime) {
+      if (endHour == null) {
+        setError("Please select an end time.");
+        return;
+      }
+      endTotal = endHour * 60 + (endMinute || 0);
+      if (endTotal < startTotal) {
+        setError("End time cannot be earlier than start time.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -45,7 +125,10 @@ export default function AddEventScreen({ navigation, route, user }) {
         date,
         title,
         description,
-        time,
+        startHour,
+        startMinute,
+        endHour: hasEndTime ? endHour : null,
+        endMinute: hasEndTime ? endMinute : null,
         createdAt,
       };
 
@@ -91,14 +174,43 @@ export default function AddEventScreen({ navigation, route, user }) {
             numberOfLines={3}
           />
 
-          <Text style={styles.label}>Time</Text>
-          <TextInput
-            value={time}
-            onChangeText={setTime}
-            placeholder="e.g. 14:00"
-            placeholderTextColor="#9AA3AF"
-            style={styles.input}
-          />
+          <Text style={styles.label}>Start Time</Text>
+          <TouchableOpacity
+            style={styles.timeButton}
+            onPress={() => setShowStartPicker(true)}
+          >
+            <Text style={styles.timeButtonText}>
+              {`${String(startHour).padStart(2, "0")}:${String(startMinute).padStart(2, "0")}`}
+            </Text>
+            <Text style={styles.timeButtonHint}>Tap to pick time</Text>
+          </TouchableOpacity>
+
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>Add End Time?</Text>
+            <Switch
+              value={hasEndTime}
+              onValueChange={setHasEndTime}
+              trackColor={{ true: "#5E9CFF", false: "#CBD5E1" }}
+              thumbColor={hasEndTime ? "#3478F6" : "#FFFFFF"}
+            />
+          </View>
+          {hasEndTime && (
+            <View style={{ marginTop: 4 }}>
+              <Text style={styles.label}>End Time</Text>
+              <TouchableOpacity
+                style={styles.timeButton}
+                onPress={() => setShowEndPicker(true)}
+              >
+                <Text style={styles.timeButtonText}>
+                  {`${String(endHour || startHour).padStart(2, "0")}:${String(
+                    endMinute
+                  ).padStart(2, "0")}`}
+                </Text>
+                <Text style={styles.timeButtonHint}>Tap to pick time</Text>
+              </TouchableOpacity>
+              <Text style={styles.timeHint}>{formattedTime}</Text>
+            </View>
+          )}
 
           <Text style={styles.label}>Date</Text>
           <TextInput
@@ -126,6 +238,30 @@ export default function AddEventScreen({ navigation, route, user }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <TimePickerPopup
+        visible={showStartPicker}
+        initialHour={startHour}
+        initialMinute={startMinute}
+        onClose={() => setShowStartPicker(false)}
+        onConfirm={({ hour, minute }) => {
+          setStartHour(hour);
+          setStartMinute(minute);
+          if (hasEndTime && endHour == null) {
+            setEndHour(hour);
+            setEndMinute(minute);
+          }
+        }}
+      />
+      <TimePickerPopup
+        visible={showEndPicker}
+        initialHour={endHour || startHour}
+        initialMinute={endMinute}
+        onClose={() => setShowEndPicker(false)}
+        onConfirm={({ hour, minute }) => {
+          setEndHour(hour);
+          setEndMinute(minute);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -158,6 +294,31 @@ const styles = StyleSheet.create({
   multiline: {
     height: 90,
     paddingTop: 12,
+  },
+  timeButton: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    padding: 14,
+    backgroundColor: "#F8FAFC",
+  },
+  timeButtonText: {
+    fontWeight: "700",
+    color: "#111827",
+    fontSize: 16,
+  },
+  timeButtonHint: {
+    color: "#6B7280",
+    marginTop: 4,
+  },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  timeHint: {
+    color: "#6B7280",
+    marginTop: 6,
   },
   error: {
     color: "#DC2626",

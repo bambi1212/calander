@@ -17,6 +17,18 @@ import { auth, db } from "../firebase";
 
 const PRIMARY = "#3478F6";
 
+const formatEventTime = (event) => {
+  const pad = (value) => String(value).padStart(2, "0");
+  if (event.startHour != null && event.startMinute != null) {
+    const start = `${pad(event.startHour)}:${pad(event.startMinute)}`;
+    if (event.endHour != null && event.endMinute != null) {
+      return `${start} - ${pad(event.endHour)}:${pad(event.endMinute)}`;
+    }
+    return start;
+  }
+  return event.time || "All day";
+};
+
 export default function HomeScreen({ navigation, user }) {
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
@@ -100,6 +112,13 @@ export default function HomeScreen({ navigation, user }) {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.demoButton}
+        onPress={() => navigation.navigate("TimePickerDemo")}
+      >
+        <Text style={styles.demoButtonText}>Open Clock Dial Picker Demo</Text>
+      </TouchableOpacity>
+
       <Calendar
         current={selectedDate}
         onDayPress={handleDayPress}
@@ -134,7 +153,7 @@ export default function HomeScreen({ navigation, user }) {
           renderItem={({ item }) => (
             <View style={styles.eventCard}>
               <View style={styles.eventMeta}>
-                <Text style={styles.eventTime}>{item.time || "All day"}</Text>
+                <Text style={styles.eventTime}>{formatEventTime(item)}</Text>
                 <Text style={styles.eventTitle}>{item.title}</Text>
               </View>
               {item.description ? (
@@ -164,6 +183,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     padding: 16,
+  },
+  demoButton: {
+    backgroundColor: "#E8F1FF",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#D0E2FF",
+  },
+  demoButtonText: {
+    color: PRIMARY,
+    fontWeight: "700",
+    textAlign: "center",
   },
   calendar: {
     borderRadius: 12,
