@@ -14,7 +14,8 @@ import ViewEventsScreen from "./screens/ViewEventsScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import MenuScreen from "./screens/MenuScreen";
 import AboutScreen from "./screens/AboutScreen";
-import { AppThemeProvider, useAppTheme } from "./context/AppThemeContext";
+import { ThemeProvider, useAppTheme } from "./context/AppThemeContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 const Stack = createNativeStackNavigator();
 
@@ -87,38 +88,33 @@ function Navigator({ user }) {
 }
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <AuthGate />
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
+  );
+}
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setAuthLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  if (authLoading) {
+function AuthGate() {
+  const { user, loading } = useAuth();
+  const { colors } = useAppTheme();
+  if (loading) {
     return (
       <GestureHandlerRootView
         style={{
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="large" color="#3478F6" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </GestureHandlerRootView>
     );
   }
-
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppThemeProvider>
-        <Navigator user={user} />
-      </AppThemeProvider>
-    </GestureHandlerRootView>
-  );
+  return <Navigator user={user} />;
 }

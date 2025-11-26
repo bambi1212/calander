@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Appearance } from "react-native";
 import { DefaultTheme, DarkTheme } from "@react-navigation/native";
 import * as SystemUI from "expo-system-ui";
 
@@ -32,39 +33,33 @@ const themes = {
   },
 };
 
-const AppThemeContext = createContext({
+const ThemeContext = createContext({
   theme: "light",
   colors: themes.light,
   setTheme: () => {},
   navigationTheme: {},
 });
 
-export function AppThemeProvider({ children }) {
-  const [theme, setTheme] = useState("light");
-  const colors = themes[theme];
+export function ThemeProvider({ children }) {
+  const system = Appearance.getColorScheme() || "light";
+  const [theme, setTheme] = useState(system);
+  const colors = themes[theme] || themes.light;
 
   useEffect(() => {
-    const applyNavigationColors = async () => {
-      try {
-        await SystemUI.setBackgroundColorAsync(colors.background);
-      } catch (_) {
-        // ignore if unavailable
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      setTheme(colorScheme || "light");
+    });
+    return () => sub?.remove();
+  }, []);
+
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
+    if (NavigationBar?.setBackgroundColorAsync) {
+      NavigationBar.setBackgroundColorAsync(theme === "light" ? "#000000" : "#FFFFFF").catch(() => {});
+      if (NavigationBar.setButtonStyleAsync) {
+        NavigationBar.setButtonStyleAsync(theme === "light" ? "light" : "dark").catch(() => {});
       }
-      if (NavigationBar?.setBackgroundColorAsync) {
-        const navBg = theme === "light" ? "#000000" : "#FFFFFF";
-        try {
-          await NavigationBar.setBackgroundColorAsync(navBg);
-          if (NavigationBar.setButtonStyleAsync) {
-            await NavigationBar.setButtonStyleAsync(
-              theme === "light" ? "light" : "dark"
-            );
-          }
-        } catch (_) {
-          // ignore if not supported
-        }
-      }
-    };
-    applyNavigationColors();
+    }
   }, [theme, colors.background]);
 
   const navigationTheme = useMemo(() => {
@@ -88,11 +83,9 @@ export function AppThemeProvider({ children }) {
     [theme, colors, navigationTheme]
   );
 
-  return (
-    <AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useAppTheme() {
-  return useContext(AppThemeContext);
+  return useContext(ThemeContext);
 }

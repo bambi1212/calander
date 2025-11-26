@@ -22,12 +22,14 @@ import { AntDesign } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { auth } from "../firebase";
 import { useAppTheme } from "../context/AppThemeContext";
+import { useAuth } from "../context/AuthContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const { user } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -87,9 +89,8 @@ export default function LoginScreen({ navigation }) {
       await signInWithEmailAndPassword(auth, email.trim(), password);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -101,8 +102,8 @@ export default function LoginScreen({ navigation }) {
       }
       await promptAsync();
     } catch (err) {
-      setGoogleLoading(false);
       Alert.alert("Google Sign-In failed", err?.message || "Please try again.");
+      setGoogleLoading(false);
     }
   };
 

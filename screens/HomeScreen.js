@@ -28,7 +28,7 @@ const formatEventTime = (event) => {
 };
 
 export default function HomeScreen({ navigation, user }) {
-  const { colors } = useAppTheme();
+  const { colors, theme } = useAppTheme();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
@@ -102,7 +102,7 @@ export default function HomeScreen({ navigation, user }) {
     }
 
     return marks;
-  }, [events, selectedDate]);
+  }, [events, selectedDate, colors]);
 
   const eventsForSelectedDate = useMemo(
     () => events.filter((event) => event.date === selectedDate),
@@ -112,6 +112,7 @@ export default function HomeScreen({ navigation, user }) {
   return (
     <View style={styles.container}>
       <Calendar
+        key={theme}
         current={selectedDate}
         onDayPress={handleDayPress}
         markedDates={markedDates}

@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
+  SafeAreaView,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Share,
   Linking,
 } from "react-native";
+import * as SystemUI from "expo-system-ui";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import * as SystemUI from "expo-system-ui";
+import { useAppTheme } from "../context/AppThemeContext";
 
 let NavigationBar = null;
 try {
@@ -19,39 +20,24 @@ try {
   NavigationBar = null;
 }
 
-const PRIMARY = "#3478F6";
-
 export default function SettingsScreen() {
-  const [theme, setTheme] = useState("light");
+  const { theme, setTheme, colors } = useAppTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   useEffect(() => {
-    const applyNavigationColors = async () => {
-      const navBg = theme === "light" ? "#000000" : "#FFFFFF";
-      try {
-        await SystemUI.setBackgroundColorAsync(theme === "light" ? "#FFFFFF" : "#0F172A");
-      } catch (_) {
-        // no-op if unavailable
+    SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
+    if (NavigationBar?.setBackgroundColorAsync) {
+      NavigationBar.setBackgroundColorAsync(theme === "light" ? "#000000" : "#FFFFFF").catch(() => {});
+      if (NavigationBar.setButtonStyleAsync) {
+        NavigationBar.setButtonStyleAsync(theme === "light" ? "light" : "dark").catch(() => {});
       }
-      if (NavigationBar?.setBackgroundColorAsync) {
-        try {
-          await NavigationBar.setBackgroundColorAsync(navBg);
-          if (NavigationBar.setButtonStyleAsync) {
-            await NavigationBar.setButtonStyleAsync(theme === "light" ? "light" : "dark");
-          }
-        } catch (_) {
-          // ignore if not supported
-        }
-      }
-    };
-    applyNavigationColors();
-  }, [theme]);
+    }
+  }, [theme, colors.background]);
 
   const handleShare = async () => {
     try {
       await Share.share({ message: "Check out this calendar app!" });
-    } catch (_) {
-      // ignore errors
-    }
+    } catch (_) {}
   };
 
   const handleReview = () => {
@@ -76,34 +62,18 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>Appearance</Text>
           <View style={styles.toggleRow}>
             <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                theme === "light" && styles.toggleButtonActive,
-              ]}
+              style={[styles.toggleButton, theme === "light" && styles.toggleButtonActive]}
               onPress={() => setTheme("light")}
             >
-              <Text
-                style={[
-                  styles.toggleText,
-                  theme === "light" && styles.toggleTextActive,
-                ]}
-              >
+              <Text style={[styles.toggleText, theme === "light" && styles.toggleTextActive]}>
                 Light Mode
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                theme === "dark" && styles.toggleButtonActive,
-              ]}
+              style={[styles.toggleButton, theme === "dark" && styles.toggleButtonActive]}
               onPress={() => setTheme("dark")}
             >
-              <Text
-                style={[
-                  styles.toggleText,
-                  theme === "dark" && styles.toggleTextActive,
-                ]}
-              >
+              <Text style={[styles.toggleText, theme === "dark" && styles.toggleTextActive]}>
                 Dark Mode
               </Text>
             </TouchableOpacity>
@@ -126,85 +96,43 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: PRIMARY,
-    marginBottom: 16,
-  },
-  row: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: "#F8FAFC",
-    marginBottom: 12,
-  },
-  rowText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  rowHint: {
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: "#F8FAFC",
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 10,
-    fontSize: 16,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    alignItems: "center",
-  },
-  toggleButtonActive: {
-    borderColor: PRIMARY,
-    backgroundColor: "#E8F1FF",
-  },
-  toggleText: {
-    fontWeight: "700",
-    color: "#4B5563",
-  },
-  toggleTextActive: {
-    color: PRIMARY,
-  },
-  cardHint: {
-    marginTop: 8,
-    color: "#6B7280",
-    fontSize: 13,
-  },
-  logoutRow: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
-  },
-  logoutText: {
-    color: "#DC2626",
-  },
-});
+const getStyles = (colors) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, padding: 16 },
+    title: { fontSize: 22, fontWeight: "700", color: colors.primary, marginBottom: 16 },
+    row: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 14,
+      backgroundColor: colors.card,
+      marginBottom: 12,
+    },
+    rowText: { fontSize: 16, fontWeight: "700", color: colors.text },
+    rowHint: { color: colors.muted, marginTop: 4 },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 14,
+      backgroundColor: colors.card,
+      marginBottom: 12,
+    },
+    cardTitle: { fontWeight: "700", color: colors.text, marginBottom: 10, fontSize: 16 },
+    toggleRow: { flexDirection: "row", gap: 10 },
+    toggleButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+    },
+    toggleButtonActive: { borderColor: colors.primary, backgroundColor: "#E8F1FF" },
+    toggleText: { fontWeight: "700", color: colors.muted },
+    toggleTextActive: { color: colors.primary },
+    cardHint: { marginTop: 8, color: colors.muted, fontSize: 13 },
+    logoutRow: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
+    logoutText: { color: "#DC2626" },
+  });
