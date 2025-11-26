@@ -10,10 +10,11 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
+  ScrollView,
 } from "react-native";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import TimePickerPopup from "../components/TimePickerPopup";
+import TimePicker from "../components/TimePicker";
 
 const PRIMARY = "#3478F6";
 
@@ -49,7 +50,7 @@ export default function AddEventScreen({ navigation, route, user }) {
 
   const [title, setTitle] = useState(event?.title || "");
   const [description, setDescription] = useState(event?.description || "");
-  const [date, setDate] = useState(initialDate || today);
+  const [date] = useState(initialDate || today);
   const [startHour, setStartHour] = useState(
     event?.startHour ?? legacyTime.startHour ?? 12
   );
@@ -153,114 +154,114 @@ export default function AddEventScreen({ navigation, route, user }) {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.form}>
-          <Text style={styles.label}>Title</Text>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Event title"
-            placeholderTextColor="#9AA3AF"
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Optional notes"
-            placeholderTextColor="#9AA3AF"
-            style={[styles.input, styles.multiline]}
-            multiline
-            numberOfLines={3}
-          />
-
-          <Text style={styles.label}>Start Time</Text>
-          <TouchableOpacity
-            style={styles.timeButton}
-            onPress={() => setShowStartPicker(true)}
-          >
-            <Text style={styles.timeButtonText}>
-              {`${String(startHour).padStart(2, "0")}:${String(startMinute).padStart(2, "0")}`}
-            </Text>
-            <Text style={styles.timeButtonHint}>Tap to pick time</Text>
-          </TouchableOpacity>
-
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>Add End Time?</Text>
-            <Switch
-              value={hasEndTime}
-              onValueChange={setHasEndTime}
-              trackColor={{ true: "#5E9CFF", false: "#CBD5E1" }}
-              thumbColor={hasEndTime ? "#3478F6" : "#FFFFFF"}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.form}>
+            <Text style={styles.label}>Title</Text>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Event title"
+              placeholderTextColor="#9AA3AF"
+              style={styles.input}
             />
-          </View>
-          {hasEndTime && (
-            <View style={{ marginTop: 4 }}>
-              <Text style={styles.label}>End Time</Text>
-              <TouchableOpacity
-                style={styles.timeButton}
-                onPress={() => setShowEndPicker(true)}
-              >
-                <Text style={styles.timeButtonText}>
-                  {`${String(endHour || startHour).padStart(2, "0")}:${String(
-                    endMinute
-                  ).padStart(2, "0")}`}
-                </Text>
-                <Text style={styles.timeButtonHint}>Tap to pick time</Text>
-              </TouchableOpacity>
-              <Text style={styles.timeHint}>{formattedTime}</Text>
-            </View>
-          )}
 
-          <Text style={styles.label}>Date</Text>
-          <TextInput
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#9AA3AF"
-            style={styles.input}
-          />
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Optional notes"
+              placeholderTextColor="#9AA3AF"
+              style={[styles.input, styles.multiline]}
+              multiline
+              numberOfLines={3}
+            />
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={saveEvent}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>
-                {event ? "Update Event" : "Add Event"}
+            <Text style={styles.label}>Start Time</Text>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={() => setShowStartPicker(true)}
+            >
+              <Text style={styles.timeButtonText}>
+                {`${String(startHour).padStart(2, "0")}:${String(startMinute).padStart(2, "0")}`}
               </Text>
+              <Text style={styles.timeButtonHint}>Tap to pick time</Text>
+            </TouchableOpacity>
+
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Add End Time?</Text>
+              <Switch
+                value={hasEndTime}
+                onValueChange={setHasEndTime}
+                trackColor={{ true: "#5E9CFF", false: "#CBD5E1" }}
+                thumbColor={hasEndTime ? "#3478F6" : "#FFFFFF"}
+              />
+            </View>
+            {hasEndTime && (
+              <View style={{ marginTop: 4 }}>
+                <Text style={styles.label}>End Time</Text>
+                <TouchableOpacity
+                  style={styles.timeButton}
+                  onPress={() => setShowEndPicker(true)}
+                >
+                  <Text style={styles.timeButtonText}>
+                    {`${String(endHour || startHour).padStart(2, "0")}:${String(
+                      endMinute
+                    ).padStart(2, "0")}`}
+                  </Text>
+                  <Text style={styles.timeButtonHint}>Tap to pick time</Text>
+                </TouchableOpacity>
+                <Text style={styles.timeHint}>{formattedTime}</Text>
+              </View>
             )}
-          </TouchableOpacity>
-        </View>
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={saveEvent}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>
+                  {event ? "Update Event" : "Add Event"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-      <TimePickerPopup
+      <TimePicker
         visible={showStartPicker}
         initialHour={startHour}
         initialMinute={startMinute}
-        onClose={() => setShowStartPicker(false)}
-        onConfirm={({ hour, minute }) => {
+        onCancel={() => setShowStartPicker(false)}
+        onConfirm={(hour, minute) => {
           setStartHour(hour);
           setStartMinute(minute);
           if (hasEndTime && endHour == null) {
             setEndHour(hour);
             setEndMinute(minute);
           }
+          setShowStartPicker(false);
         }}
+        title="Select Start Time"
       />
-      <TimePickerPopup
+      <TimePicker
         visible={showEndPicker}
         initialHour={endHour || startHour}
         initialMinute={endMinute}
-        onClose={() => setShowEndPicker(false)}
-        onConfirm={({ hour, minute }) => {
+        onCancel={() => setShowEndPicker(false)}
+        onConfirm={(hour, minute) => {
           setEndHour(hour);
           setEndMinute(minute);
+          setShowEndPicker(false);
         }}
+        title="Select End Time"
       />
     </SafeAreaView>
   );
@@ -273,10 +274,13 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 20,
   },
   form: {
     gap: 14,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
   },
   label: {
     fontWeight: "600",

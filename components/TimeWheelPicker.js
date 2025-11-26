@@ -11,101 +11,80 @@ import {
 const PRIMARY = "#3478F6";
 const ITEM_HEIGHT = 44;
 const VISIBLE_ROWS = 5;
+const PADDING = ((VISIBLE_ROWS - 1) / 2) * ITEM_HEIGHT; // centers the selected row
 const WHEEL_HEIGHT = ITEM_HEIGHT * VISIBLE_ROWS;
-const SELECTION_TOP = ITEM_HEIGHT * Math.floor(VISIBLE_ROWS / 2);
-const LOOP_MULTIPLIER = 220; // big enough to avoid edge hits while flicking
+const LOOP_MULTIPLIER = 120;
 
-const pad = (value) => String(value).padStart(2, "0");
+const pad = (val) => String(val).padStart(2, "0");
 
-const buildLoopedData = (values) => {
-  const looped = [];
-  for (let i = 0; i < LOOP_MULTIPLIER; i += 1) {
-    looped.push(...values);
-  }
-  return looped;
-};
+const buildLooped = (values) =>
+  Array.from({ length: values.length * LOOP_MULTIPLIER }, (_, idx) => {
+    return values[idx % values.length];
+  });
 
 const normalizeIndex = (index, length) => {
   const mod = index % length;
   return mod < 0 ? mod + length : mod;
 };
 
-const InfiniteWheel = ({
-  data,
-  initialValue,
-  resetToken,
-  onChange,
-  formatter,
-}) => {
+const Wheel = ({ values, initialValue, resetKey, formatter, onValueChange }) => {
   const listRef = useRef(null);
-  const baseLength = data.length;
-  const loopedData = useMemo(() => buildLoopedData(data), [data]);
-  const middleAnchor =
-    Math.floor(loopedData.length / 2) -
-    (Math.floor(loopedData.length / 2) % baseLength);
+  const baseLength = values.length;
+  const data = useMemo(() => buildLooped(values), [values]);
+  const middleAnchor = useMemo(() => {
+    const mid = Math.floor(data.length / 2);
+    return mid - (mid % baseLength);
+  }, [data, baseLength]);
 
   const [activeIndex, setActiveIndex] = useState(middleAnchor);
   const activeRef = useRef(middleAnchor);
-  const computeIndexFromOffset = (offsetY) => Math.round(offsetY / ITEM_HEIGHT);
-  const toAnchoredIndex = (rawIndex) =>
-    middleAnchor + normalizeIndex(rawIndex, baseLength);
 
-  // Only snap to the provided initial value when the picker session resets (on open).
-  useEffect(() => {
-    const valueIndex = Math.max(
-      0,
-      data.findIndex((item) => item === initialValue)
-    );
+  const scrollToValue = (value) => {
+    const valueIndex = Math.max(0, values.findIndex((v) => v === value));
     const targetIndex = middleAnchor + valueIndex;
     activeRef.current = targetIndex;
     setActiveIndex(targetIndex);
     listRef.current?.scrollToOffset({
-      offset: targetIndex * ITEM_HEIGHT,
+      offset: targetIndex * ITEM_HEIGHT + PADDING,
       animated: false,
     });
-  }, [resetToken, data, initialValue, middleAnchor]);
+  };
 
-  const updateValueFromIndex = (index) => {
-    const normalized = normalizeIndex(index, baseLength);
-    const nextValue = data[normalized];
-    if (nextValue !== undefined) {
-      onChange?.(nextValue);
-    }
+  useEffect(() => {
+    scrollToValue(initialValue ?? values[0]);
+  }, [resetKey, initialValue, values]);
+
+  const computeIndex = (offsetY) => {
+    const effectiveOffset = offsetY - PADDING;
+    return Math.round(effectiveOffset / ITEM_HEIGHT);
+  };
+
+  const updateFromIndex = (idx) => {
+    const normalized = normalizeIndex(idx, baseLength);
+    const nextValue = values[normalized];
+    onValueChange?.(nextValue);
   };
 
   const snapToNearest = (offsetY) => {
-    const rawIndex = computeIndexFromOffset(offsetY);
-    const targetIndex = toAnchoredIndex(rawIndex);
-    const targetOffset = targetIndex * ITEM_HEIGHT;
-    if (listRef.current) {
-      listRef.current.scrollToOffset({
-        offset: targetOffset,
-        animated: false, // snap immediately so we don't drift to a neighbor
-      });
-    }
-    activeRef.current = targetIndex;
-    setActiveIndex(targetIndex);
-    updateValueFromIndex(targetIndex);
+    const idx = computeIndex(offsetY);
+    const targetOffset = idx * ITEM_HEIGHT + PADDING;
+    listRef.current?.scrollToOffset({
+      offset: targetOffset,
+      animated: false,
+    });
+    activeRef.current = idx;
+    setActiveIndex(idx);
+    updateFromIndex(idx);
   };
 
   const handleScroll = (e) => {
     const offsetY = e.nativeEvent.contentOffset.y;
-    const rawIndex = computeIndexFromOffset(offsetY);
-    if (rawIndex !== activeRef.current) {
-      activeRef.current = rawIndex;
-      setActiveIndex(rawIndex);
-      updateValueFromIndex(rawIndex);
+    const idx = computeIndex(offsetY);
+    if (idx !== activeRef.current) {
+      activeRef.current = idx;
+      setActiveIndex(idx);
+      updateFromIndex(idx);
     }
-  };
-
-  const handleMomentumScrollEnd = (e) => {
-    const offsetY = e.nativeEvent.contentOffset.y;
-    snapToNearest(offsetY);
-  };
-
-  const handleScrollEndDrag = (e) => {
-    const offsetY = e.nativeEvent.contentOffset.y;
-    snapToNearest(offsetY);
   };
 
   return (
@@ -113,21 +92,21 @@ const InfiniteWheel = ({
       <View style={styles.selectionBar} pointerEvents="none" />
       <FlatList
         ref={listRef}
-        data={loopedData}
+        data={data}
         keyExtractor={(_, idx) => String(idx)}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
         snapToAlignment="center"
-        initialNumToRender={VISIBLE_ROWS + 2}
-        windowSize={7}
-        maxToRenderPerBatch={24}
+        initialNumToRender={VISIBLE_ROWS + 4}
+        windowSize={9}
+        maxToRenderPerBatch={32}
         removeClippedSubviews
-        contentContainerStyle={{ paddingVertical: SELECTION_TOP }}
-        onScroll={handleScroll}
+        contentContainerStyle={{ paddingVertical: PADDING }}
         scrollEventThrottle={16}
-        onMomentumScrollEnd={handleMomentumScrollEnd}
-        onScrollEndDrag={handleScrollEndDrag}
+        onScroll={handleScroll}
+        onMomentumScrollEnd={(e) => snapToNearest(e.nativeEvent.contentOffset.y)}
+        onScrollEndDrag={(e) => snapToNearest(e.nativeEvent.contentOffset.y)}
         getItemLayout={(_, idx) => ({
           length: ITEM_HEIGHT,
           offset: ITEM_HEIGHT * idx,
@@ -153,37 +132,31 @@ const InfiniteWheel = ({
   );
 };
 
-function TimePickerModal({
+export default function TimeWheelPicker({
   visible,
-  onClose,
   initialHour = 12,
   initialMinute = 0,
   onConfirm,
+  onCancel,
+  title = "Select Time",
 }) {
   const [hour, setHour] = useState(initialHour);
   const [minute, setMinute] = useState(initialMinute);
-  const [wheelSession, setWheelSession] = useState(0);
+  const [resetKey, setResetKey] = useState(0);
 
-  const hours = useMemo(
-    () => Array.from({ length: 24 }, (_, i) => i + 1),
-    []
-  );
-  const minutes = useMemo(
-    () => Array.from({ length: 60 }, (_, i) => i),
-    []
-  );
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i + 1), []);
+  const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []);
 
   useEffect(() => {
     if (visible) {
       setHour(initialHour);
       setMinute(initialMinute);
-      setWheelSession((id) => id + 1);
+      setResetKey((k) => k + 1);
     }
   }, [visible, initialHour, initialMinute]);
 
   const handleConfirm = () => {
-    onConfirm?.({ hour, minute });
-    onClose?.();
+    onConfirm?.(hour, minute);
   };
 
   return (
@@ -191,31 +164,33 @@ function TimePickerModal({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={onCancel}
     >
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>Select Time</Text>
+          <Text style={styles.title}>{title}</Text>
+
           <View style={styles.wheelsRow}>
-            <InfiniteWheel
-              data={hours}
+            <Wheel
+              values={hours}
               initialValue={hour}
-              resetToken={wheelSession}
-              onChange={setHour}
-              formatter={(v) => pad(v)}
+              resetKey={resetKey}
+              formatter={pad}
+              onValueChange={setHour}
             />
-            <InfiniteWheel
-              data={minutes}
+            <Wheel
+              values={minutes}
               initialValue={minute}
-              resetToken={wheelSession}
-              onChange={setMinute}
-              formatter={(v) => pad(v)}
+              resetKey={resetKey}
+              formatter={pad}
+              onValueChange={setMinute}
             />
           </View>
+
           <Text style={styles.preview}>{`${pad(hour)}:${pad(minute)}`}</Text>
 
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.secondaryButton} onPress={onClose}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={onCancel}>
               <Text style={styles.secondaryText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryButton} onPress={handleConfirm}>
@@ -227,8 +202,6 @@ function TimePickerModal({
     </Modal>
   );
 }
-
-export default TimePickerModal;
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -280,7 +253,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 8,
     right: 8,
-    top: SELECTION_TOP,
+    top: PADDING,
     height: ITEM_HEIGHT,
     borderRadius: 12,
     borderWidth: 2,

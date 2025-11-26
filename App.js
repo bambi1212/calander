@@ -11,10 +11,7 @@ import RegisterScreen from "./screens/RegisterScreen";
 import HomeScreen from "./screens/HomeScreen";
 import AddEventScreen from "./screens/AddEventScreen";
 import ViewEventsScreen from "./screens/ViewEventsScreen";
-import TimePickerScreen from "./screens/TimePickerScreen";
-import TimePickerDemo from "./screens/TimePickerDemo";
-import SelectStartTime from "./screens/SelectStartTime";
-import SelectEndTime from "./screens/SelectEndTime";
+import SettingsScreen from "./screens/SettingsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -76,26 +73,6 @@ export default function App() {
                 {(props) => <AddEventScreen {...props} user={user} />}
               </Stack.Screen>
               <Stack.Screen
-                name="TimePicker"
-                component={TimePickerScreen}
-                options={{ title: "Select Time", presentation: "modal" }}
-              />
-              <Stack.Screen
-                name="TimePickerDemo"
-                component={TimePickerDemo}
-                options={{ title: "Clock Dial Picker" }}
-              />
-              <Stack.Screen
-                name="SelectStartTime"
-                component={SelectStartTime}
-                options={{ title: "Start Time", presentation: "modal" }}
-              />
-              <Stack.Screen
-                name="SelectEndTime"
-                component={SelectEndTime}
-                options={{ title: "End Time", presentation: "modal" }}
-              />
-              <Stack.Screen
                 name="ViewEvents"
                 options={({ route }) => ({
                   title: route.params?.date
@@ -105,6 +82,11 @@ export default function App() {
               >
                 {(props) => <ViewEventsScreen {...props} user={user} />}
               </Stack.Screen>
+              <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{ title: "Settings" }}
+              />
             </>
           ) : (
             <>

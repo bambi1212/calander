@@ -10,10 +10,9 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Calendar } from "react-native-calendars";
-import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
-import { auth, db } from "../firebase";
+import { db } from "../firebase";
 
 const PRIMARY = "#3478F6";
 
@@ -58,27 +57,26 @@ export default function HomeScreen({ navigation, user }) {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity style={styles.headerButton} onPress={handleLogout}>
-          <Text style={styles.headerButtonText}>Logout</Text>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => navigation.navigate("Settings")}
+          accessibilityLabel="Open settings"
+        >
+          <View style={styles.menuLine} />
+          <View style={[styles.menuLine, { width: 18 }]} />
+          <View style={[styles.menuLine, { width: 20 }]} />
         </TouchableOpacity>
       ),
     });
   }, [navigation]);
 
-  const handleLogout = () => {
-    Alert.alert("Logout", "Do you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => signOut(auth),
-      },
-    ]);
-  };
-
   const handleDayPress = (day) => {
-    setSelectedDate(day.dateString);
-    navigation.navigate("ViewEvents", { date: day.dateString });
+    const dateString = day.dateString;
+    if (dateString === selectedDate) {
+      navigation.navigate("ViewEvents", { date: dateString });
+      return;
+    }
+    setSelectedDate(dateString);
   };
 
   const markedDates = useMemo(() => {
@@ -112,13 +110,6 @@ export default function HomeScreen({ navigation, user }) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.demoButton}
-        onPress={() => navigation.navigate("TimePickerDemo")}
-      >
-        <Text style={styles.demoButtonText}>Open Clock Dial Picker Demo</Text>
-      </TouchableOpacity>
-
       <Calendar
         current={selectedDate}
         onDayPress={handleDayPress}
@@ -183,19 +174,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     padding: 16,
-  },
-  demoButton: {
-    backgroundColor: "#E8F1FF",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#D0E2FF",
-  },
-  demoButtonText: {
-    color: PRIMARY,
-    fontWeight: "700",
-    textAlign: "center",
   },
   calendar: {
     borderRadius: 12,
@@ -270,14 +248,17 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
   },
-  headerButton: {
+  menuButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  headerButtonText: {
-    color: PRIMARY,
-    fontWeight: "700",
+  menuLine: {
+    height: 3,
+    width: 22,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 2,
+    marginVertical: 2,
   },
 });
