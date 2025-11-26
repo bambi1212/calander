@@ -90,6 +90,12 @@ const Wheel = ({ values, initialValue, resetKey, formatter, onValueChange }) => 
   return (
     <View style={styles.wheel}>
       <View style={styles.selectionBar} pointerEvents="none" />
+      <View style={[styles.fadeOverlay, styles.topFade]} pointerEvents="none">
+        <View style={[styles.fadeStrip, { opacity: 0.9 }]} />
+        <View style={[styles.fadeStrip, { opacity: 0.65 }]} />
+        <View style={[styles.fadeStrip, { opacity: 0.35 }]} />
+        <View style={[styles.fadeStrip, { opacity: 0.15 }]} />
+      </View>
       <FlatList
         ref={listRef}
         data={data}
@@ -128,6 +134,15 @@ const Wheel = ({ values, initialValue, resetKey, formatter, onValueChange }) => 
           );
         }}
       />
+      <View
+        style={[styles.fadeOverlay, styles.bottomFade]}
+        pointerEvents="none"
+      >
+        <View style={[styles.fadeStrip, { opacity: 0.9 }]} />
+        <View style={[styles.fadeStrip, { opacity: 0.65 }]} />
+        <View style={[styles.fadeStrip, { opacity: 0.35 }]} />
+        <View style={[styles.fadeStrip, { opacity: 0.15 }]} />
+      </View>
     </View>
   );
 };
@@ -239,15 +254,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   wheel: {
-    width: 96,
+    width: 104,
     height: WHEEL_HEIGHT,
     overflow: "hidden",
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    marginHorizontal: 8,
+    marginHorizontal: 10,
     backgroundColor: "#FFFFFF",
     position: "relative",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   selectionBar: {
     position: "absolute",
@@ -256,10 +276,12 @@ const styles = StyleSheet.create({
     top: PADDING,
     height: ITEM_HEIGHT,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: PRIMARY,
-    backgroundColor: "rgba(52,120,246,0.08)",
-    zIndex: 1,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    zIndex: 2,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   wheelItem: {
     height: ITEM_HEIGHT,
@@ -268,13 +290,17 @@ const styles = StyleSheet.create({
   },
   wheelText: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
+    color: "#111827",
   },
   wheelTextActive: {
-    color: "#0F172A",
+    color: "#111827",
+    fontSize: 20,
+    fontWeight: "700",
   },
   wheelTextInactive: {
-    color: "#6B7280",
+    color: "#111827",
+    opacity: 0.4,
   },
   preview: {
     textAlign: "center",
@@ -316,5 +342,26 @@ const styles = StyleSheet.create({
   primaryText: {
     color: "#FFFFFF",
     fontWeight: "700",
+  },
+  fadeOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: PADDING,
+    zIndex: 3,
+    backgroundColor: "transparent",
+    pointerEvents: "none",
+  },
+  topFade: {
+    top: 0,
+    flexDirection: "column",
+  },
+  bottomFade: {
+    bottom: 0,
+    flexDirection: "column-reverse",
+  },
+  fadeStrip: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
   },
 });
