@@ -20,6 +20,7 @@ import {
 } from "firebase/auth";
 import { AntDesign } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { makeRedirectUri } from "expo-auth-session";
 import { auth } from "../firebase";
 import { useAppTheme } from "../context/AppThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -37,20 +38,25 @@ export default function LoginScreen({ navigation }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const useProxy = __DEV__;
+  const redirectUri = makeRedirectUri({ scheme: "calander", useProxy });
+  const prodRedirect = "calander://oauthredirect";
   const androidClientId =
     process.env.EXPO_PUBLIC_GOOGLE_ANDROID_ID ||
     Constants?.expoConfig?.extra?.googleAndroidClientId ||
     undefined;
+  const expoClientId = process.env.EXPO_PUBLIC_GOOGLE_EXPO_ID;
+  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_ID;
+  const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_ID;
 
-  const [request, response, promptAsync] = Google.useAuthRequest(
-    {
-      androidClientId,
-      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_ID,
-      expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_ID,
-      responseType: "id_token",
-    },
-    { useProxy: true }
-  );
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId,
+    iosClientId,
+    expoClientId,
+    webClientId,
+    responseType: "id_token",
+    redirectUri,
+  });
 
   useEffect(() => {
     const finishGoogleSignIn = async () => {
@@ -97,10 +103,14 @@ export default function LoginScreen({ navigation }) {
     setError("");
     setGoogleLoading(true);
     try {
-      if (!androidClientId) {
-        throw new Error("Google Sign-In is not configured. Add EXPO_PUBLIC_GOOGLE_ANDROID_ID.");
-      }
-      await promptAsync();
+      await loginWithGoogle({
+        promptAsyncFn: promptAsync,
+        redirectUri,
+        prodRedirect,
+        androidClientId,
+        expoClientId,
+        webClientId,
+      });
     } catch (err) {
       Alert.alert("Google Sign-In failed", err?.message || "Please try again.");
       setGoogleLoading(false);
@@ -184,6 +194,41 @@ export default function LoginScreen({ navigation }) {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+export async function loginWithGoogle({
+  promptAsyncFn,
+  redirectUri,
+  prodRedirect,
+  androidClientId,
+  expoClientId,
+  webClientId,
+}) {
+  const clientId =
+    androidClientId ||
+    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_ID ||
+    Constants?.expoConfig?.extra?.googleAndroidClientId;
+  if (!clientId) {
+    throw new Error("Google Sign-In is not configured. Add EXPO_PUBLIC_GOOGLE_ANDROID_ID.");
+  }
+  const useProxy = __DEV__;
+  const result = await promptAsyncFn({
+    useProxy,
+    redirectUri: useProxy ? redirectUri : prodRedirect,
+    androidClientId: clientId,
+    expoClientId,
+    webClientId,
+    responseType: "id_token",
+  });
+  if (result?.type === "success") {
+    const { id_token } = result.params || {};
+    if (!id_token) {
+      throw new Error("Missing Google ID token");
+    }
+    const credential = GoogleAuthProvider.credential(id_token);
+    await signInWithCredential(auth, credential);
+  }
+  return result;
 }
 
 const getStyles = (colors) =>
